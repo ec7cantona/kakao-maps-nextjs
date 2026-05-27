@@ -43,7 +43,7 @@ Guard all `window.kakao` access with `typeof window !== 'undefined'` and only mo
 
 ## Status
 
-Work in progress. Examples and full code samples coming as I extract them from Footballr's production code.
+Actively extracting and refining patterns from [Footballr](https://footballr.app) production code. Examples added incrementally as they prove out in production.
 
 ## License
 
