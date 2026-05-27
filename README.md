@@ -12,34 +12,62 @@ Kakao Maps is the de facto standard map API in Korea (used by 100M+ users), but 
 
 This repo collects the patterns I've validated while building [Footballr](https://footballr.app), a Football Manager-inspired platform for Korean amateur football teams.
 
-## Patterns covered
+## Examples
 
-### 1. Vanilla SDK with `autoload=false`
+Three production-tested patterns in [`examples/`](./examples):
 
-Load the SDK once, initialize maps on demand. Survives route changes and React StrictMode double-renders.
+### 1. [SDK Loader](./examples/01-load-sdk.ts)
+
+Loads the Kakao Maps SDK with `autoload=false`. Handles:
+- Route change race conditions
+- React StrictMode double-renders
+- Concurrent load requests (single-flight promise)
+- SSR safety (browser-only execution)
 
 ```ts
-const script = document.createElement('script')
-script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${KEY}&autoload=false&libraries=services`
-script.onload = () => {
-  window.kakao.maps.load(() => {
-    // map initialization here
-  })
-}
+import { loadKakaoSDK } from "./01-load-sdk";
+
+await loadKakaoSDK(process.env.NEXT_PUBLIC_KAKAO_MAP_KEY!);
+// SDK ready — use window.kakao.maps
 ```
 
-### 2. Server-side keyword search
+### 2. [Basic Map Component](./examples/02-basic-map.tsx)
 
-Keep the REST API key on the server. Client calls a Next.js route handler, which proxies to Kakao's `/v2/local/search/keyword.json`.
+A minimal Next.js client component (`"use client"`) that renders a Kakao Map.
+SSR-safe, with proper cleanup and loading states.
 
+```tsx
+<BasicMap
+  center={{ lat: 37.5665, lng: 126.978 }}
+  level={3}
+  appKey={process.env.NEXT_PUBLIC_KAKAO_MAP_KEY!}
+/>
 ```
-NEXT_PUBLIC_KAKAO_MAP_KEY    → client-side JS SDK key (safe to expose)
-KAKAO_REST_API_KEY            → server-only, never in client bundle
+
+### 3. [Server-side Keyword Search](./examples/03-keyword-search.ts)
+
+A Next.js App Router route handler that proxies Kakao's keyword search API.
+Keeps your `KAKAO_REST_API_KEY` on the server, never exposed to the client.
+
+Place at `app/api/places/search/route.ts`, then call from the client:
+
+```ts
+const res = await fetch(`/api/places/search?q=${encodeURIComponent(query)}`);
+const data = await res.json();
 ```
 
-### 3. SSR-safe map initialization
+## Environment variables
 
-Guard all `window.kakao` access with `typeof window !== 'undefined'` and only mount in `useEffect`.
+```bash
+# Client-side JS SDK key (safe to expose, restricted by domain in Kakao Console)
+NEXT_PUBLIC_KAKAO_MAP_KEY=your_javascript_key
+
+# Server-only REST API key (never bundle to client)
+KAKAO_REST_API_KEY=your_rest_api_key
+```
+
+Get both keys from the [Kakao Developers Console](https://developers.kakao.com/).
+Make sure to register your domain in the Kakao app settings under "Web platform".
 
 ## Status
 
